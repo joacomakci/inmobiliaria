@@ -6,6 +6,9 @@ import { AppService } from './app.service';
 import typeormConfig from './config/typeorm.config';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { AgentsModule } from './agents/agents.module';
+import { PropertiesModule } from './properties/properties.module';
+import { LeadsModule } from './leads/leads.module';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { AuthModule } from './auth/auth.module';
     }),
     UsersModule,
     AuthModule,
+    AgentsModule,
+    PropertiesModule,
+    LeadsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

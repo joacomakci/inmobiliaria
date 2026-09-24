@@ -1,0 +1,51 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import { AgentsService } from './agents.service';
+import { CreateAgentDto } from './dto/create-agent.dto';
+import { UpdateAgentDto } from './dto/update-agent.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
+
+@Controller('agents')
+@UseGuards(JwtAuthGuard, RolesGuard)
+export class AgentsController {
+  constructor(private readonly agentsService: AgentsService) {}
+
+  @Post()
+  @Roles(UserRole.ADMIN)
+  create(@Body() dto: CreateAgentDto) {
+    return this.agentsService.create(dto);
+  }
+
+  @Get()
+  findAll() {
+    return this.agentsService.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.agentsService.findOne(id);
+  }
+
+  @Patch(':id')
+  @Roles(UserRole.ADMIN)
+  update(@Param('id') id: string, @Body() dto: UpdateAgentDto) {
+    return this.agentsService.update(id, dto);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.ADMIN)
+  remove(@Param('id') id: string, @Body() dto: UpdateAgentDto) {
+    return this.agentsService.remove(id);
+  }
+}
