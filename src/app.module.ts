@@ -9,6 +9,8 @@ import { AuthModule } from './auth/auth.module';
 import { AgentsModule } from './agents/agents.module';
 import { PropertiesModule } from './properties/properties.module';
 import { LeadsModule } from './leads/leads.module';
+import { MediaModule } from './media/media.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { LeadsModule } from './leads/leads.module';
     AgentsModule,
     PropertiesModule,
     LeadsModule,
+    MediaModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

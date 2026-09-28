@@ -3,6 +3,8 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { JwtPayload } from './strategies/jwt.strategy';
 
 @Injectable()
 export class AuthService {
@@ -27,7 +29,32 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    return this.buildTokens(user.id, user.email, user.role);
+  }
+
+  async refresh(dto: RefreshTokenDto) {
+    let payload: JwtPayload;
+
+    try {
+      payload = await this.jwtService.verifyAsync<JwtPayload>(
+        dto.refreshToken,
+        { secret: process.env.JWT_REFRESH_SECRET },
+      );
+    } catch {
+      throw new UnauthorizedException('Refresh token inválido o expirado');
+    }
+
+    const user = await this.usersService.findOne(payload.sub);
+
+    if (!user.active) {
+      throw new UnauthorizedException('Usuario inactivo');
+    }
+
+    return this.buildTokens(user.id, user.email, user.role);
+  }
+
+  private buildTokens(userId: string, email: string, role: string) {
+    const payload = { sub: userId, email, role };
 
     const accessExpiration = process.env.JWT_ACCESS_EXPIRATION ?? '15m';
     const refreshExpiration = process.env.JWT_REFRESH_EXPIRATION ?? '7d';
@@ -42,9 +69,9 @@ export class AuthService {
         expiresIn: refreshExpiration as `${number}${'s' | 'm' | 'h' | 'd'}`,
       }),
       user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
+        id: userId,
+        email,
+        role,
       },
     };
   }

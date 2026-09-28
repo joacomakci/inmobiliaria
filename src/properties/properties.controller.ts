@@ -8,6 +8,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
@@ -17,16 +18,19 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
 
+@ApiTags('properties')
 @Controller('properties')
 export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 
   @Get()
+  @ApiOperation({ summary: 'Listar propiedades (público)' })
   findAll() {
     return this.propertiesService.findAll();
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Obtener una propiedad por id (público)' })
   findOne(@Param('id') id: string) {
     return this.propertiesService.findOne(id);
   }
@@ -34,6 +38,8 @@ export class PropertiesController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Crear una propiedad (admin o editor)' })
   create(@Body() dto: CreatePropertyDto) {
     return this.propertiesService.create(dto);
   }
@@ -41,6 +47,8 @@ export class PropertiesController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Actualizar una propiedad (admin o editor)' })
   update(@Param('id') id: string, @Body() dto: UpdatePropertyDto) {
     return this.propertiesService.update(id, dto);
   }
@@ -48,6 +56,8 @@ export class PropertiesController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Eliminar una propiedad (solo admin)' })
   remove(@Param('id') id: string) {
     return this.propertiesService.remove(id);
   }
@@ -55,6 +65,8 @@ export class PropertiesController {
   @Post(':id/images')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Agregar una imagen a la propiedad' })
   addImage(
     @Param('id') propertyId: string,
     @Body() dto: CreatePropertyImageDto,
@@ -65,6 +77,8 @@ export class PropertiesController {
   @Delete(':id/images/:imageId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Eliminar una imagen de la propiedad' })
   removeImage(
     @Param('id') propertyId: string,
     @Param('imageId') imageId: string,
@@ -75,6 +89,8 @@ export class PropertiesController {
   @Patch(':id/images/:imageId/order')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.EDITOR)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cambiar el orden de una imagen' })
   reorderImage(
     @Param('id') propertyId: string,
     @Param('imageId') imageId: string,
