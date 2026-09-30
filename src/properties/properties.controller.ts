@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -24,16 +25,36 @@ export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Listar propiedades (público)' })
-  findAll() {
-    return this.propertiesService.findAll();
-  }
+@ApiOperation({ summary: 'Listar propiedades (público)' })
+findAll(
+  @Query('operation') operation?: string,
+  @Query('type') type?: string,
+  @Query('city') city?: string,
+  @Query('minPrice') minPrice?: string,
+  @Query('maxPrice') maxPrice?: string,
+  @Query('rooms') rooms?: string,
+) {
+  return this.propertiesService.findAll({
+    operation,
+    type,
+    city,
+    minPrice: minPrice ? Number(minPrice) : undefined,
+    maxPrice: maxPrice ? Number(maxPrice) : undefined,
+    rooms: rooms ? Number(rooms) : undefined,
+  });
+}
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Obtener una propiedad por id (público)' })
-  findOne(@Param('id') id: string) {
-    return this.propertiesService.findOne(id);
-  }
+  @Get('slug/:slug')
+@ApiOperation({ summary: 'Obtener una propiedad por slug (público)' })
+findBySlug(@Param('slug') slug: string) {
+  return this.propertiesService.findBySlug(slug);
+}
+
+@Get(':id')
+@ApiOperation({ summary: 'Obtener una propiedad por id (público)' })
+findOne(@Param('id') id: string) {
+  return this.propertiesService.findOne(id);
+}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)

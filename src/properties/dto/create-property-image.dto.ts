@@ -2,7 +2,7 @@ import { IsInt, IsOptional, IsString, IsUrl, Min } from 'class-validator';
 
 export class CreatePropertyImageDto {
   @IsString()
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   url!: string;
 
   @IsOptional()
