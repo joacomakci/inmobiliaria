@@ -20,9 +20,7 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalInterceptors(
-    new ClassSerializerInterceptor(app.get(Reflector)),
-  );
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
   const config = new DocumentBuilder()
     .setTitle('Inmobiliaria API')
@@ -35,8 +33,8 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   app.enableCors({
-  origin: 'http://localhost:4200',
-});
+    origin: 'http://localhost:4200',
+  });
 
   await app.listen(process.env.PORT ?? 3000);
 }

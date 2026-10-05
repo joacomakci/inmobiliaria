@@ -35,11 +35,11 @@ export class Lead {
   @Column()
   firstName!: string;
 
-  @Column()
-  lastName!: string;
+  @Column({ nullable: true })
+  lastName?: string;
 
-  @Column()
-  email!: string;
+  @Column({ nullable: true })
+  email?: string;
 
   @Column({ nullable: true })
   phone?: string;

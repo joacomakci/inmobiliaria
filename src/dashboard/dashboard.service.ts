@@ -25,7 +25,9 @@ export class DashboardService {
       ]);
 
     const conversionRate =
-      totalLeads > 0 ? Number(((leadsGanados / totalLeads) * 100).toFixed(1)) : 0;
+      totalLeads > 0
+        ? Number(((leadsGanados / totalLeads) * 100).toFixed(1))
+        : 0;
 
     return {
       totalProperties,

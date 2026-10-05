@@ -88,7 +88,7 @@ export class Property {
   agent!: Agent;
 
   @OneToMany(() => PropertyImage, (image) => image.property, {
-  cascade: true,
+    cascade: true,
   })
   images!: PropertyImage[];
 

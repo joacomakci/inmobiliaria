@@ -46,55 +46,55 @@ export class PropertiesService {
   }
 
   async findAll(filters?: {
-  operation?: string;
-  type?: string;
-  city?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  rooms?: number;
-}): Promise<Property[]> {
-  const query = this.propertiesRepository
-    .createQueryBuilder('property')
-    .leftJoinAndSelect('property.agent', 'agent')
-    .leftJoinAndSelect('property.images', 'images');
+    operation?: string;
+    type?: string;
+    city?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    rooms?: number;
+  }): Promise<Property[]> {
+    const query = this.propertiesRepository
+      .createQueryBuilder('property')
+      .leftJoinAndSelect('property.agent', 'agent')
+      .leftJoinAndSelect('property.images', 'images');
 
-  if (filters?.operation) {
-    query.andWhere('property.operation = :operation', {
-      operation: filters.operation,
-    });
+    if (filters?.operation) {
+      query.andWhere('property.operation = :operation', {
+        operation: filters.operation,
+      });
+    }
+
+    if (filters?.type) {
+      query.andWhere('property.type = :type', { type: filters.type });
+    }
+
+    if (filters?.city) {
+      query.andWhere(
+        '(property.city ILIKE :city OR property.neighborhood ILIKE :city)',
+        { city: `%${filters.city}%` },
+      );
+    }
+
+    if (filters?.minPrice) {
+      query.andWhere('property.price >= :minPrice', {
+        minPrice: filters.minPrice,
+      });
+    }
+
+    if (filters?.maxPrice) {
+      query.andWhere('property.price <= :maxPrice', {
+        maxPrice: filters.maxPrice,
+      });
+    }
+
+    if (filters?.rooms) {
+      query.andWhere('property.rooms >= :rooms', { rooms: filters.rooms });
+    }
+
+    query.orderBy('property.createdAt', 'DESC');
+
+    return query.getMany();
   }
-
-  if (filters?.type) {
-    query.andWhere('property.type = :type', { type: filters.type });
-  }
-
-  if (filters?.city) {
-  query.andWhere(
-    '(property.city ILIKE :city OR property.neighborhood ILIKE :city)',
-    { city: `%${filters.city}%` },
-  );
-}
-
-  if (filters?.minPrice) {
-    query.andWhere('property.price >= :minPrice', {
-      minPrice: filters.minPrice,
-    });
-  }
-
-  if (filters?.maxPrice) {
-    query.andWhere('property.price <= :maxPrice', {
-      maxPrice: filters.maxPrice,
-    });
-  }
-
-  if (filters?.rooms) {
-    query.andWhere('property.rooms >= :rooms', { rooms: filters.rooms });
-  }
-
-  query.orderBy('property.createdAt', 'DESC');
-
-  return query.getMany();
-}
 
   async findOne(id: string): Promise<Property> {
     const property = await this.propertiesRepository.findOne({
@@ -108,15 +108,15 @@ export class PropertiesService {
   }
 
   async findBySlug(slug: string): Promise<Property> {
-  const property = await this.propertiesRepository.findOne({
-    where: { slug },
-    relations: { agent: true, images: true },
-  });
-  if (!property) {
-    throw new NotFoundException('Propiedad no encontrada');
+    const property = await this.propertiesRepository.findOne({
+      where: { slug },
+      relations: { agent: true, images: true },
+    });
+    if (!property) {
+      throw new NotFoundException('Propiedad no encontrada');
+    }
+    return property;
   }
-  return property;
-}
 
   async update(id: string, dto: UpdatePropertyDto): Promise<Property> {
     const property = await this.findOne(id);

@@ -35,7 +35,9 @@ export class LeadsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.AGENTE)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Listar leads, con filtros opcionales de status y agente' })
+  @ApiOperation({
+    summary: 'Listar leads, con filtros opcionales de status y agente',
+  })
   findAll(
     @Query('status') status?: string,
     @Query('agentId') agentId?: string,

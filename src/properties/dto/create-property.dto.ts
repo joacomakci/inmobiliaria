@@ -10,10 +10,7 @@ import {
   Length,
   Min,
 } from 'class-validator';
-import {
-  PropertyOperation,
-  PropertyType,
-} from '../entities/property.entity';
+import { PropertyOperation, PropertyType } from '../entities/property.entity';
 
 export class CreatePropertyDto {
   @IsString()

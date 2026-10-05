@@ -32,15 +32,27 @@ async function runSeed() {
       role: UserRole.ADMIN,
     });
     await userRepo.save(admin);
-    console.log('✔ Usuario admin creado (admin@inmobiliaria.com / password123)');
+    console.log(
+      '✔ Usuario admin creado (admin@inmobiliaria.com / password123)',
+    );
   } else {
     console.log('- Usuario admin ya existía, se omite');
   }
 
   // --- Agentes ---
   const agentsData = [
-    { firstName: 'Juan', lastName: 'Pérez', email: 'juan.perez@inmobiliaria.com', phone: '+54911111111' },
-    { firstName: 'Ana', lastName: 'López', email: 'ana.lopez@inmobiliaria.com', phone: '+54911222333' },
+    {
+      firstName: 'Juan',
+      lastName: 'Pérez',
+      email: 'juan.perez@inmobiliaria.com',
+      phone: '+54911111111',
+    },
+    {
+      firstName: 'Ana',
+      lastName: 'López',
+      email: 'ana.lopez@inmobiliaria.com',
+      phone: '+54911222333',
+    },
   ];
 
   const agents: Agent[] = [];
@@ -51,7 +63,9 @@ async function runSeed() {
       await agentRepo.save(agent);
       console.log(`✔ Agente creado: ${data.firstName} ${data.lastName}`);
     } else {
-      console.log(`- Agente ${data.firstName} ${data.lastName} ya existía, se omite`);
+      console.log(
+        `- Agente ${data.firstName} ${data.lastName} ya existía, se omite`,
+      );
     }
     agents.push(agent);
   }

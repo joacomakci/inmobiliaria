@@ -39,7 +39,9 @@ export class DashboardController {
   }
 
   @Get('most-viewed')
-  @ApiOperation({ summary: 'Propiedades más recientes (placeholder de "más vistas")' })
+  @ApiOperation({
+    summary: 'Propiedades más recientes (placeholder de "más vistas")',
+  })
   mostViewedProperties() {
     return this.dashboardService.mostViewedProperties();
   }
