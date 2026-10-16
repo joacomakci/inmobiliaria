@@ -1,0 +1,618 @@
+﻿// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\agents\dto\create-agent.dto.ts
+import { IsEmail, IsOptional, IsString, IsUUID } from 'class-validator';
+
+export class CreateAgentDto {
+  @IsString()
+  firstName!: string;
+
+  @IsString()
+  lastName!: string;
+
+  @IsEmail()
+  email!: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  photoUrl?: string;
+
+  @IsOptional()
+  @IsUUID()
+  userId?: string;
+}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\agents\dto\update-agent.dto.ts
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateAgentDto } from './create-agent.dto';
+
+export class UpdateAgentDto extends PartialType(CreateAgentDto) {}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\agents\entities\agent.entity.ts
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToOne,
+  JoinColumn,
+  CreateDateColumn,
+} from 'typeorm';
+import { User } from '../../users/entities/user.entity';
+
+@Entity('agents')
+export class Agent {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column()
+  firstName!: string;
+
+  @Column()
+  lastName!: string;
+
+  @Column()
+  email!: string;
+
+  @Column({ nullable: true })
+  phone?: string;
+
+  @Column({ nullable: true })
+  photoUrl?: string;
+
+  @OneToOne(() => User, { nullable: true })
+  @JoinColumn()
+  user?: User;
+
+  @CreateDateColumn()
+  createdAt!: Date;
+}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\auth\dto\login.dto.ts
+import { IsEmail, MinLength } from 'class-validator';
+
+export class LoginDto {
+  @IsEmail()
+  email!: string;
+
+  @MinLength(8)
+  password!: string;
+}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\auth\dto\refresh-token.dto.ts
+import { IsString } from 'class-validator';
+
+export class RefreshTokenDto {
+  @IsString()
+  refreshToken!: string;
+}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\auth\auth.service.ts
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+import { UsersService } from '../users/users.service';
+import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { JwtPayload } from './strategies/jwt.strategy';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
+  ) {}
+
+  async login(dto: LoginDto) {
+    const user = await this.usersService.findByEmail(dto.email);
+
+    if (!user || !user.active) {
+      throw new UnauthorizedException('Credenciales invÃ¡lidas');
+    }
+
+    const passwordMatches = await bcrypt.compare(
+      dto.password,
+      user.passwordHash,
+    );
+
+    if (!passwordMatches) {
+      throw new UnauthorizedException('Credenciales invÃ¡lidas');
+    }
+
+    return this.buildTokens(user.id, user.email, user.role);
+  }
+
+  async refresh(dto: RefreshTokenDto) {
+    let payload: JwtPayload;
+
+    try {
+      payload = await this.jwtService.verifyAsync<JwtPayload>(
+        dto.refreshToken,
+        { secret: process.env.JWT_REFRESH_SECRET },
+      );
+    } catch {
+      throw new UnauthorizedException('Refresh token invÃ¡lido o expirado');
+    }
+
+    const user = await this.usersService.findOne(payload.sub);
+
+    if (!user.active) {
+      throw new UnauthorizedException('Usuario inactivo');
+    }
+
+    return this.buildTokens(user.id, user.email, user.role);
+  }
+
+  private buildTokens(userId: string, email: string, role: string) {
+    const payload = { sub: userId, email, role };
+
+    const accessExpiration = process.env.JWT_ACCESS_EXPIRATION ?? '15m';
+    const refreshExpiration = process.env.JWT_REFRESH_EXPIRATION ?? '7d';
+
+    return {
+      accessToken: this.jwtService.sign(payload, {
+        secret: process.env.JWT_SECRET,
+        expiresIn: accessExpiration as `${number}${'s' | 'm' | 'h' | 'd'}`,
+      }),
+      refreshToken: this.jwtService.sign(payload, {
+        secret: process.env.JWT_REFRESH_SECRET,
+        expiresIn: refreshExpiration as `${number}${'s' | 'm' | 'h' | 'd'}`,
+      }),
+      user: {
+        id: userId,
+        email,
+        role,
+      },
+    };
+  }
+}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\leads\dto\assign-agent.dto.ts
+import { IsUUID } from 'class-validator';
+
+export class AssignAgentDto {
+  @IsUUID()
+  agentId!: string;
+}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\leads\dto\change-lead-status.dto.ts
+import { IsEnum } from 'class-validator';
+import { LeadStatus } from '../entities/lead.entity';
+
+export class ChangeLeadStatusDto {
+  @IsEnum(LeadStatus)
+  status!: LeadStatus;
+}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\leads\dto\create-lead-note.dto.ts
+import { IsString } from 'class-validator';
+
+export class CreateLeadNoteDto {
+  @IsString()
+  text!: string;
+}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\leads\dto\create-lead.dto.ts
+import { IsEmail, IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { LeadSource } from '../entities/lead.entity';
+
+export class CreateLeadDto {
+  @IsString()
+  firstName!: string;
+
+  @IsOptional()
+  @IsString()
+  lastName?: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsString()
+  message!: string;
+
+  @IsOptional()
+  @IsEnum(LeadSource)
+  source?: LeadSource;
+
+  @IsOptional()
+  @IsUUID()
+  propertyId?: string;
+}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\leads\entities\lead-note.entity.ts
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+} from 'typeorm';
+import { Lead } from './lead.entity';
+import { User } from '../../users/entities/user.entity';
+
+@Entity('lead_notes')
+export class LeadNote {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @ManyToOne(() => Lead, (lead) => lead.notes, {
+    nullable: false,
+    onDelete: 'CASCADE',
+  })
+  lead!: Lead;
+
+  @ManyToOne(() => User, { nullable: false })
+  authorUser!: User;
+
+  @Column({ type: 'text' })
+  text!: string;
+
+  @CreateDateColumn()
+  createdAt!: Date;
+}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\leads\entities\lead.entity.ts
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { Property } from '../../properties/entities/property.entity';
+import { Agent } from '../../agents/entities/agent.entity';
+import { LeadNote } from './lead-note.entity';
+
+export enum LeadSource {
+  LANDING_FORM = 'landing_form',
+  WHATSAPP = 'whatsapp',
+  TELEFONO = 'telefono',
+  REFERIDO = 'referido',
+}
+
+export enum LeadStatus {
+  NUEVO = 'nuevo',
+  CONTACTADO = 'contactado',
+  VISITA_AGENDADA = 'visita_agendada',
+  EN_NEGOCIACION = 'en_negociacion',
+  GANADO = 'ganado',
+  PERDIDO = 'perdido',
+}
+
+@Entity('leads')
+export class Lead {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column()
+  firstName!: string;
+
+  @Column({ nullable: true })
+  lastName?: string;
+
+  @Column({ nullable: true })
+  email?: string;
+
+  @Column({ nullable: true })
+  phone?: string;
+
+  @Column({ type: 'text' })
+  message!: string;
+
+  @Column({
+    type: 'enum',
+    enum: LeadSource,
+    default: LeadSource.LANDING_FORM,
+  })
+  source!: LeadSource;
+
+  @ManyToOne(() => Property, { nullable: true })
+  property?: Property;
+
+  @ManyToOne(() => Agent, { nullable: true })
+  agent?: Agent;
+
+  @Column({ type: 'enum', enum: LeadStatus, default: LeadStatus.NUEVO })
+  status!: LeadStatus;
+
+  @OneToMany(() => LeadNote, (note) => note.lead, { cascade: true })
+  notes!: LeadNote[];
+
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
+}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\properties\dto\create-property-image.dto.ts
+import { IsInt, IsOptional, IsString, IsUrl, Min } from 'class-validator';
+
+export class CreatePropertyImageDto {
+  @IsString()
+  @IsUrl({ require_tld: false })
+  url!: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  order?: number;
+}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\properties\dto\create-property.dto.ts
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+  IsUUID,
+  Length,
+  Min,
+} from 'class-validator';
+import { PropertyOperation, PropertyType } from '../entities/property.entity';
+
+export class CreatePropertyDto {
+  @IsString()
+  title!: string;
+
+  @IsString()
+  description!: string;
+
+  @IsEnum(PropertyType)
+  type!: PropertyType;
+
+  @IsEnum(PropertyOperation)
+  operation!: PropertyOperation;
+
+  @IsNumber()
+  @IsPositive()
+  price!: number;
+
+  @IsOptional()
+  @IsString()
+  @Length(3, 3)
+  currency?: string;
+
+  @IsString()
+  address!: string;
+
+  @IsString()
+  city!: string;
+
+  @IsOptional()
+  @IsString()
+  neighborhood?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  areaM2?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  rooms?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  bathrooms?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  featured?: boolean;
+
+  @IsUUID()
+  agentId!: string;
+}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\properties\dto\update-property.dto.ts
+import { PartialType } from '@nestjs/mapped-types';
+import { CreatePropertyDto } from './create-property.dto';
+
+export class UpdatePropertyDto extends PartialType(CreatePropertyDto) {}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\properties\entities\property-image.entity.ts
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+} from 'typeorm';
+import { Property } from './property.entity';
+
+@Entity('property_images')
+export class PropertyImage {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @ManyToOne(() => Property, (property) => property.images, {
+    nullable: false,
+    onDelete: 'CASCADE',
+  })
+  property!: Property;
+
+  @Column()
+  url!: string;
+
+  @Column({ type: 'int', default: 0 })
+  order!: number;
+
+  @CreateDateColumn()
+  createdAt!: Date;
+}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\properties\entities\property.entity.ts
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+} from 'typeorm';
+import { Agent } from '../../agents/entities/agent.entity';
+import { PropertyImage } from './property-image.entity';
+
+export enum PropertyType {
+  CASA = 'casa',
+  DEPARTAMENTO = 'departamento',
+  TERRENO = 'terreno',
+  LOCAL = 'local',
+  OFICINA = 'oficina',
+}
+
+export enum PropertyOperation {
+  VENTA = 'venta',
+  ALQUILER = 'alquiler',
+}
+
+export enum PropertyStatus {
+  DISPONIBLE = 'disponible',
+  RESERVADA = 'reservada',
+  VENDIDA = 'vendida',
+  ALQUILADA = 'alquilada',
+}
+
+@Entity('properties')
+export class Property {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column()
+  title!: string;
+
+  @Column({ unique: true })
+  slug!: string;
+
+  @Column({ type: 'text' })
+  description!: string;
+
+  @Column({ type: 'enum', enum: PropertyType })
+  type!: PropertyType;
+
+  @Column({ type: 'enum', enum: PropertyOperation })
+  operation!: PropertyOperation;
+
+  @Column({ type: 'decimal', precision: 12, scale: 2 })
+  price!: number;
+
+  @Column({ length: 3, default: 'USD' })
+  currency!: string;
+
+  @Column()
+  address!: string;
+
+  @Column()
+  city!: string;
+
+  @Column({ nullable: true })
+  neighborhood?: string;
+
+  @Column({ type: 'int', nullable: true })
+  areaM2?: number;
+
+  @Column({ type: 'int', nullable: true })
+  rooms?: number;
+
+  @Column({ type: 'int', nullable: true })
+  bathrooms?: number;
+
+  @Column({
+    type: 'enum',
+    enum: PropertyStatus,
+    default: PropertyStatus.DISPONIBLE,
+  })
+  status!: PropertyStatus;
+
+  @Column({ default: false })
+  featured!: boolean;
+
+  @ManyToOne(() => Agent, { nullable: false })
+  agent!: Agent;
+
+  @OneToMany(() => PropertyImage, (image) => image.property, {
+    cascade: true,
+  })
+  images!: PropertyImage[];
+
+  @Column({ type: 'timestamp', nullable: true })
+  publishedAt?: Date;
+
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
+}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\users\dto\create-user.dto.ts
+import { IsEmail, IsEnum, IsOptional, MinLength } from 'class-validator';
+import { UserRole } from '../entities/user.entity';
+
+export class CreateUserDto {
+  @IsEmail()
+  email!: string;
+
+  @MinLength(8)
+  password!: string;
+
+  @IsOptional()
+  @IsEnum(UserRole)
+  role?: UserRole;
+}
+
+// FILE: D:\proyectos\inmobiliaria\inmobiliaria\src\users\entities\user.entity.ts
+import { Exclude } from 'class-transformer';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+
+export enum UserRole {
+  ADMIN = 'admin',
+  AGENTE = 'agente',
+  EDITOR = 'editor',
+}
+
+@Entity('users')
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column({ unique: true })
+  email!: string;
+
+  @Exclude()
+  @Column()
+  passwordHash!: string;
+
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.EDITOR })
+  role!: UserRole;
+
+  @Column({ default: true })
+  active!: boolean;
+
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
+}
+
