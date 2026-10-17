@@ -9,6 +9,7 @@ import { AssignAgentDto } from './dto/assign-agent.dto';
 import { CreateLeadNoteDto } from './dto/create-lead-note.dto';
 import { PropertiesService } from '../properties/properties.service';
 import { AgentsService } from '../agents/agents.service';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class LeadsService {
@@ -90,7 +91,7 @@ export class LeadsService {
 
     const note = this.leadNotesRepository.create({
       lead,
-      authorUser: { id: authorUserId } as any,
+      authorUser: { id: authorUserId } as User,
       text: dto.text,
     });
 

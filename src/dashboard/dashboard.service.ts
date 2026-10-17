@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Lead } from '../leads/entities/lead.entity';
+import { Lead, LeadStatus } from '../leads/entities/lead.entity';
 import { Property } from '../properties/entities/property.entity';
 
 @Injectable()
@@ -18,10 +18,8 @@ export class DashboardService {
       await Promise.all([
         this.propertiesRepository.count(),
         this.leadsRepository.count(),
-        this.leadsRepository.count({ where: { status: 'ganado' as any } }),
-        this.leadsRepository.count({
-          where: { status: 'nuevo' as any },
-        }),
+        this.leadsRepository.count({ where: { status: LeadStatus.GANADO } }),
+        this.leadsRepository.count({ where: { status: LeadStatus.NUEVO } }),
       ]);
 
     const conversionRate =
@@ -70,6 +68,37 @@ export class DashboardService {
       .addSelect('COUNT(*)', 'count')
       .groupBy('property.status')
       .getRawMany();
+  }
+
+  async leadsByDay(days: number) {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const toKey = (d: Date) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - (days - 1));
+
+    const rows = await this.leadsRepository
+      .createQueryBuilder('lead')
+      .select(`TO_CHAR(lead."createdAt", 'YYYY-MM-DD')`, 'day')
+      .addSelect('COUNT(*)', 'count')
+      .where('lead."createdAt" >= :start', { start: toKey(start) })
+      .groupBy('"day"')
+      .orderBy('"day"', 'ASC')
+      .getRawMany<{ day: string; count: string }>();
+
+    const counts = new Map(
+      rows.map((row) => [row.day, Number(row.count)] as [string, number]),
+    );
+
+    // Rellenamos los días sin consultas con 0, así el gráfico no tiene huecos
+    return Array.from({ length: days }, (_, i) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + i);
+      const key = toKey(date);
+      return { date: key, count: counts.get(key) ?? 0 };
+    });
   }
 
   async mostViewedProperties() {
