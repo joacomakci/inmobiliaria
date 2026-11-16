@@ -10,7 +10,11 @@ import {
   Length,
   Min,
 } from 'class-validator';
-import { PropertyOperation, PropertyType } from '../entities/property.entity';
+import {
+  PropertyOperation,
+  PropertyStatus,
+  PropertyType,
+} from '../entities/property.entity';
 
 export class CreatePropertyDto {
   @IsString()
@@ -24,6 +28,10 @@ export class CreatePropertyDto {
 
   @IsEnum(PropertyOperation)
   operation!: PropertyOperation;
+
+  @IsOptional()
+  @IsEnum(PropertyStatus)
+  status?: PropertyStatus;
 
   @IsNumber()
   @IsPositive()

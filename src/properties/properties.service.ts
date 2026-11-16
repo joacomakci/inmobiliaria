@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Property } from './entities/property.entity';
@@ -29,6 +33,7 @@ export class PropertiesService {
       description: dto.description,
       type: dto.type,
       operation: dto.operation,
+      status: dto.status,
       price: dto.price,
       currency: dto.currency ?? 'USD',
       address: dto.address,
@@ -91,7 +96,9 @@ export class PropertiesService {
       query.andWhere('property.rooms >= :rooms', { rooms: filters.rooms });
     }
 
-    query.orderBy('property.createdAt', 'DESC');
+    query
+      .orderBy('property.createdAt', 'DESC')
+      .addOrderBy('images.order', 'ASC');
 
     return query.getMany();
   }
@@ -100,6 +107,7 @@ export class PropertiesService {
     const property = await this.propertiesRepository.findOne({
       where: { id },
       relations: { agent: true, images: true },
+      order: { images: { order: 'ASC' } },
     });
     if (!property) {
       throw new NotFoundException('Propiedad no encontrada');
@@ -111,6 +119,7 @@ export class PropertiesService {
     const property = await this.propertiesRepository.findOne({
       where: { slug },
       relations: { agent: true, images: true },
+      order: { images: { order: 'ASC' } },
     });
     if (!property) {
       throw new NotFoundException('Propiedad no encontrada');
@@ -125,20 +134,26 @@ export class PropertiesService {
       property.agent = await this.agentsService.findOne(dto.agentId);
     }
 
+    // undefined = "no vino en la request" (se conserva);
+    // null = "vaciar el campo"
+    const pick = <T>(value: T | undefined, current: T): T =>
+      value === undefined ? current : value;
+
     Object.assign(property, {
-      title: dto.title ?? property.title,
-      description: dto.description ?? property.description,
-      type: dto.type ?? property.type,
-      operation: dto.operation ?? property.operation,
-      price: dto.price ?? property.price,
-      currency: dto.currency ?? property.currency,
-      address: dto.address ?? property.address,
-      city: dto.city ?? property.city,
-      neighborhood: dto.neighborhood ?? property.neighborhood,
-      areaM2: dto.areaM2 ?? property.areaM2,
-      rooms: dto.rooms ?? property.rooms,
-      bathrooms: dto.bathrooms ?? property.bathrooms,
-      featured: dto.featured ?? property.featured,
+      title: pick(dto.title, property.title),
+      description: pick(dto.description, property.description),
+      type: pick(dto.type, property.type),
+      operation: pick(dto.operation, property.operation),
+      status: pick(dto.status, property.status),
+      price: pick(dto.price, property.price),
+      currency: pick(dto.currency, property.currency),
+      address: pick(dto.address, property.address),
+      city: pick(dto.city, property.city),
+      neighborhood: pick(dto.neighborhood, property.neighborhood),
+      areaM2: pick(dto.areaM2, property.areaM2),
+      rooms: pick(dto.rooms, property.rooms),
+      bathrooms: pick(dto.bathrooms, property.bathrooms),
+      featured: pick(dto.featured, property.featured),
     });
 
     return this.propertiesRepository.save(property);
@@ -146,7 +161,20 @@ export class PropertiesService {
 
   async remove(id: string): Promise<void> {
     const property = await this.findOne(id);
-    await this.propertiesRepository.remove(property);
+
+    try {
+      await this.propertiesRepository.remove(property);
+    } catch (error) {
+      // 23503 = violación de clave foránea en PostgreSQL (tiene consultas asociadas)
+      const code = (error as { driverError?: { code?: string } }).driverError
+        ?.code;
+      if (code === '23503') {
+        throw new ConflictException(
+          'La propiedad tiene consultas asociadas y no se puede eliminar. Marcala como vendida o alquilada.',
+        );
+      }
+      throw error;
+    }
   }
 
   async addImage(
@@ -196,10 +224,11 @@ export class PropertiesService {
   }
 
   private async nextImageOrder(propertyId: string): Promise<number> {
-    const count = await this.propertyImagesRepository.count({
+    const last = await this.propertyImagesRepository.findOne({
       where: { property: { id: propertyId } },
+      order: { order: 'DESC' },
     });
-    return count;
+    return last ? last.order + 1 : 0;
   }
 
   private async generateUniqueSlug(title: string): Promise<string> {
